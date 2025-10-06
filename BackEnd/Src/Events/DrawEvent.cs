@@ -1,7 +1,7 @@
-using System.Text;
 using Fleck;
 using WS.Models;
 using WS.Services;
+using WS.Util;
 
 namespace WS.Events;
 
@@ -11,10 +11,16 @@ public class DrawEvent : BaseEventHandler<DrawPacket>
 
     public override Task Handle(DrawPacket dto, IWebSocketConnection socket)
     {
-        if (dto.data is null)
+        if (dto.Color == null)
             return Task.CompletedTask;
-        var packet = DrawEventAdapter.CreatePacket(dto.PlayerID, dto.data);
-        StateService.BroadCastClients(packet, socket);
+
+        StateService.Game.DrawOnBoard(dto.X, dto.Y, dto.Color ?? "");
+
+        string board = StateService.Game.ToString();
+
+        var package = DrawEventAdapter.CreatePacket(dto.PlayerID, board);
+
+        StateService.BroadCastClients(package, socket);
 
         return Task.CompletedTask;
     }

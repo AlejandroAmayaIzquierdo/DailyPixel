@@ -1,19 +1,18 @@
-import { decode, encode } from "../Util/RunLengthEncoding";
+import type { changeEvent } from "../Models/DrawEvent";
+import { decode } from "../Util/RunLengthEncoding";
 
 export class DrawingEventAdapter {
   // public static FromArrayBuffer(buffer: ArrayBuffer): string {
   //     const view = new DataView(buffer);
   // }
-  public static ToArrayBuffer(pixels: string[][]): ArrayBuffer {
+  public static ToArrayBuffer(data: changeEvent): ArrayBuffer {
     const encoder = new TextEncoder();
 
     const header = 0x02;
 
-    const data = encode(pixels);
-    console.log(data.join(","));
-    const messageBytes = encoder.encode(data.join(","));
-    const messageLength = messageBytes.length;
-    const buffer = new ArrayBuffer(1 + 4 + messageLength);
+    const colorBytes = encoder.encode(data.color);
+    const colorLength = colorBytes.length;
+    const buffer = new ArrayBuffer(1 + 4 + 2 + 2 + colorLength);
     const view = new DataView(buffer);
 
     let offset = 0;
@@ -26,9 +25,17 @@ export class DrawingEventAdapter {
     view.setUint32(offset, 12345, true);
     offset += 4;
 
-    // string message
+    //x coordinates
+    view.setUint16(offset, data.x, true);
+    offset += 2;
+
+    //y coordinates
+    view.setUint16(offset, data.y, true);
+    offset += 2;
+
+    //color message
     const uint8Array = new Uint8Array(buffer);
-    uint8Array.set(messageBytes, offset);
+    uint8Array.set(colorBytes, offset);
 
     return buffer;
   }
@@ -45,7 +52,11 @@ export class DrawingEventAdapter {
     const messageBytes = new Uint8Array(buffer, 5);
     const message = decoder.decode(messageBytes);
 
+    // console.log(message);
+
     const data = message.split(",");
+
+    // console.log(data);
 
     return decode(data);
   }

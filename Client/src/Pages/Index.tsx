@@ -5,16 +5,16 @@ import { EventWebSocket } from "../Util/EvenWebSocket";
 import { EventTypes } from "../Models/Events";
 import { JoinEventAdapter } from "../Adapters/JoinEventAdapter";
 import { DrawingEventAdapter } from "../Adapters/DrawingEventAdapter";
+import type { changeEvent } from "../Models/DrawEvent";
 
 const ws = new WebSocket("ws://localhost:8081");
 
 // interface IndexPageProps {}
 const IndexPage: React.FC = () => {
   const drawingPanelRef = useRef<DrawingPanelRef>(null);
-  const handlePixelsChange = (pixels: string[][]) => {
+  const handlePixelsChange = (data: changeEvent) => {
     if (!ws.readyState) return;
-    const data = DrawingEventAdapter.ToArrayBuffer(pixels);
-    ws.send(data);
+    ws.send(DrawingEventAdapter.ToArrayBuffer(data));
   };
 
   useEffect(() => {
@@ -33,6 +33,9 @@ const IndexPage: React.FC = () => {
             console.log(
               `Connection event - Success: ${joinEvent.success}, Player ID: ${joinEvent.playerId}`
             );
+            // console.log(joinEvent.board);
+            drawingPanelRef.current?.setPixelsFlat?.(joinEvent.board);
+
             break;
           }
           case EventTypes.MESSAGE: {
@@ -42,6 +45,7 @@ const IndexPage: React.FC = () => {
           }
           case EventTypes.DRAW: {
             const drawingData = DrawingEventAdapter.FromArrayBuffer(event.data);
+            // console.log(drawingData);
             drawingPanelRef.current?.setPixelsFlat?.(drawingData);
             break;
           }
@@ -54,7 +58,7 @@ const IndexPage: React.FC = () => {
 
   return (
     <div className="flex justify-center items-center h-screen">
-      <button
+      {/* <button
         type="button"
         className="btn btn-primary mb-4"
         onClick={() => {
@@ -65,7 +69,7 @@ const IndexPage: React.FC = () => {
         }}
       >
         Send Message
-      </button>
+      </button> */}
       <DrawingPanel ref={drawingPanelRef} onChange={handlePixelsChange} />
     </div>
   );

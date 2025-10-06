@@ -19,6 +19,12 @@ public class MessagePacket : BaseEvent
 
 public class DrawPacket : BaseEvent
 {
-    [BinaryData(2, -1)]
-    public string? data { get; set; }
+    [BinaryData(2, 16)]
+    public short X { get; set; }
+
+    [BinaryData(3, 16)]
+    public short Y { get; set; }
+
+    [BinaryData(4, -1)]
+    public string? Color { get; set; }
 }

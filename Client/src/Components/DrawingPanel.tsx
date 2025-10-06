@@ -5,11 +5,12 @@ import React, {
   forwardRef,
   useImperativeHandle,
 } from "react";
+import type { changeEvent } from "../Models/DrawEvent";
 
 interface DrawingPanelProps {
   width?: number;
   height?: number;
-  onChange?: (pixels: string[][]) => void;
+  onChange?: (data: changeEvent) => void;
 }
 
 export interface DrawingPanelRef {
@@ -23,8 +24,8 @@ const DrawingPanel = forwardRef<DrawingPanelRef, DrawingPanelProps>(
     const localRef = useRef<HTMLCanvasElement>(null);
     const [isDrawing, setIsDrawing] = useState(false);
     const [pixelSize] = useState(20); // size of each pixel in px
-    const [rows, cols] = [16, 16]; // grid size
-    const [color, setColor] = useState("#000");
+    const [rows, cols] = [43, 43]; // grid size
+    const [color] = useState("#000");
 
     const [pixels, setPixels] = useState<string[][]>(
       Array.from({ length: rows }, () => Array(cols).fill("#fff"))
@@ -69,7 +70,7 @@ const DrawingPanel = forwardRef<DrawingPanelRef, DrawingPanelProps>(
 
       const copy = pixels.map((row) => [...row]);
       copy[y][x] = color;
-      onChange?.(copy);
+      onChange?.({ x, y, color });
       setPixels(copy);
     };
 
@@ -91,12 +92,12 @@ const DrawingPanel = forwardRef<DrawingPanelRef, DrawingPanelProps>(
 
     return (
       <div className="flex flex-col items-center">
-        <input
+        {/* <input
           type="color"
           value={color}
           onChange={(e) => setColor(e.target.value)}
           className="mb-2"
-        />
+        /> */}
         <canvas
           ref={localRef}
           onMouseDown={(e) => {
