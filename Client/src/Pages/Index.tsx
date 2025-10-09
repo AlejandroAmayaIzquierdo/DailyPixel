@@ -60,10 +60,6 @@ const IndexPage: React.FC = () => {
     };
   }, []);
 
-  useEffect(() => {
-    console.log("Selected color:", color);
-  }, [color]);
-
   return (
     <div className="relative min-h-screen flex items-center justify-center">
       <DrawingPanel

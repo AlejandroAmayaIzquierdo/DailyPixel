@@ -27,6 +27,11 @@ const DrawingPanel = forwardRef<DrawingPanelRef, DrawingPanelProps>(
 
     const canvasRef = useRef<fabric.Canvas>(new fabric.Canvas());
 
+    const colorRef = useRef<string>(color || "#000000");
+    useEffect(() => {
+      if (color) colorRef.current = color;
+    }, [color]);
+
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const isMouseEvent = (e: any): e is MouseEvent =>
       "clientX" in e && "clientY" in e;
@@ -89,13 +94,12 @@ const DrawingPanel = forwardRef<DrawingPanelRef, DrawingPanelProps>(
 
       if (x < 0 || x > BOARD_WIDTH * PIXEL_SIZE) return;
       if (y < 0 || y > BOARD_HEIGHT * PIXEL_SIZE) return;
-      console.log({ x, y, color });
       const rect = new fabric.Rect({
         left: x,
         top: y,
         width: PIXEL_SIZE,
         height: PIXEL_SIZE,
-        fill: color || "#000",
+        fill: colorRef.current || "#000",
         selectable: false,
         evented: false,
       });
@@ -103,7 +107,7 @@ const DrawingPanel = forwardRef<DrawingPanelRef, DrawingPanelProps>(
       const row = Math.floor(x / PIXEL_SIZE);
       const col = Math.floor(y / PIXEL_SIZE);
       // pixels.current[xPixel][yPixel] = "#000";
-      onChange?.({ x: row, y: col, color: color || "#000" });
+      onChange?.({ x: row, y: col, color: colorRef.current || "#000" });
     };
 
     const clampPan = (canvas: fabric.Canvas) => {
@@ -149,14 +153,14 @@ const DrawingPanel = forwardRef<DrawingPanelRef, DrawingPanelProps>(
 
         for (let r = 0; r < BOARD_WIDTH; r++) {
           for (let c = 0; c < BOARD_HEIGHT; c++) {
-            const color = pixelsToDraw[r][c];
-            if (color !== "#fff") {
+            const colorData = pixelsToDraw[r][c];
+            if (colorData !== "#fff") {
               const rect = new fabric.Rect({
                 left: c * PIXEL_SIZE,
                 top: r * PIXEL_SIZE,
                 width: PIXEL_SIZE,
                 height: PIXEL_SIZE,
-                fill: color,
+                fill: colorData,
                 selectable: false,
                 evented: false,
               });
@@ -179,8 +183,6 @@ const DrawingPanel = forwardRef<DrawingPanelRef, DrawingPanelProps>(
           );
           newPixels2D.push(row);
         }
-
-        console.log(newPixels2D);
         (ref as React.RefObject<DrawingPanelRef>).current?.setPixels?.(
           newPixels2D
         );
