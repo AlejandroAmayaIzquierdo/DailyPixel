@@ -9,7 +9,7 @@ public class GameState
     public static int MAX_NUM_PLAYER = 100;
     public readonly Dictionary<Guid, Player> players = [];
 
-    public const int BOARD_SIZE = 43;
+    public const int BOARD_SIZE = 1000;
 
     public string[,] board = new string[BOARD_SIZE, BOARD_SIZE];
 

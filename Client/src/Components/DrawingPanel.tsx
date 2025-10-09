@@ -1,15 +1,13 @@
-import React, {
-  useEffect,
-  useRef,
-  useState,
-  forwardRef,
-  useImperativeHandle,
-} from "react";
+import { forwardRef, useEffect, useImperativeHandle, useRef } from "react";
+import * as fabric from "fabric";
 import type { changeEvent } from "../Models/DrawEvent";
 
+const PIXEL_SIZE = 20;
+const BOARD_WIDTH = 1000;
+const BOARD_HEIGHT = 1000;
+
 interface DrawingPanelProps {
-  width?: number;
-  height?: number;
+  color?: string;
   onChange?: (data: changeEvent) => void;
 }
 
@@ -20,98 +18,185 @@ export interface DrawingPanelRef {
 }
 
 const DrawingPanel = forwardRef<DrawingPanelRef, DrawingPanelProps>(
-  ({ onChange }, ref) => {
-    const localRef = useRef<HTMLCanvasElement>(null);
-    const [isDrawing, setIsDrawing] = useState(false);
-    const [pixelSize] = useState(20); // size of each pixel in px
-    const [rows, cols] = [43, 43]; // grid size
-    const [color] = useState("#000");
+  ({ onChange, color }, ref) => {
+    const canvasEl = useRef<HTMLCanvasElement | null>(null);
 
-    const [pixels, setPixels] = useState<string[][]>(
-      Array.from({ length: rows }, () => Array(cols).fill("#fff"))
-    );
+    const isDrawing = useRef(false);
+    const isDragging = useRef(false);
+    const lastPosition = useRef({ x: 0, y: 0 });
+
+    const canvasRef = useRef<fabric.Canvas>(new fabric.Canvas());
+
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const isMouseEvent = (e: any): e is MouseEvent =>
+      "clientX" in e && "clientY" in e;
+
+    const updateCanvasContext = (canvas: fabric.Canvas) => {
+      canvas.on("mouse:down", (event) => {
+        const e = event.e;
+
+        if (e.altKey && isMouseEvent(e)) {
+          isDragging.current = true;
+          lastPosition.current = { x: e.clientX, y: e.clientY };
+          return;
+        }
+        isDrawing.current = true;
+        drawPixel(canvas, event.e as fabric.TPointerEvent);
+      });
+
+      canvas.on("mouse:move", (event) => {
+        if (isDragging.current) {
+          const e = event.e;
+          if (!isMouseEvent(e)) return;
+          const vpt = canvas.viewportTransform;
+          vpt[4] += e.clientX - lastPosition.current.x;
+          vpt[5] += e.clientY - lastPosition.current.y;
+
+          clampPan(canvas);
+
+          canvas.requestRenderAll();
+          lastPosition.current = { x: e.clientX, y: e.clientY };
+          return;
+        }
+        if (isDrawing.current)
+          drawPixel(canvas, event as unknown as fabric.TPointerEvent);
+      });
+      canvas.on("mouse:up", () => {
+        isDrawing.current = false;
+        isDragging.current = false;
+      });
+
+      canvas.on("mouse:wheel", (event) => {
+        const delta = event.e.deltaY;
+        let zoom = canvas.getZoom();
+        zoom *= 0.999 ** delta;
+        zoom = Math.min(Math.max(zoom, 0.2), 20);
+        const point = new fabric.Point(event.e.offsetX, event.e.offsetY);
+
+        canvas.zoomToPoint(point, zoom);
+
+        clampPan(canvas);
+
+        event.e.preventDefault();
+        event.e.stopPropagation();
+      });
+    };
+
+    const drawPixel = (canvas: fabric.Canvas, event: fabric.TPointerEvent) => {
+      const pointer = canvas.getPointer(event);
+      const x = Math.floor(pointer.x / PIXEL_SIZE) * PIXEL_SIZE;
+      const y = Math.floor(pointer.y / PIXEL_SIZE) * PIXEL_SIZE;
+
+      if (x < 0 || x > BOARD_WIDTH * PIXEL_SIZE) return;
+      if (y < 0 || y > BOARD_HEIGHT * PIXEL_SIZE) return;
+      console.log({ x, y, color });
+      const rect = new fabric.Rect({
+        left: x,
+        top: y,
+        width: PIXEL_SIZE,
+        height: PIXEL_SIZE,
+        fill: color || "#000",
+        selectable: false,
+        evented: false,
+      });
+      canvas.add(rect);
+      const row = Math.floor(x / PIXEL_SIZE);
+      const col = Math.floor(y / PIXEL_SIZE);
+      // pixels.current[xPixel][yPixel] = "#000";
+      onChange?.({ x: row, y: col, color: color || "#000" });
+    };
+
+    const clampPan = (canvas: fabric.Canvas) => {
+      const vpt = canvas.viewportTransform!;
+      const zoom = canvas.getZoom();
+
+      // Definir límites (en coordenadas del lienzo)
+      const limitX = BOARD_WIDTH * PIXEL_SIZE * zoom - window.innerWidth;
+      const limitY = BOARD_HEIGHT * PIXEL_SIZE * zoom - window.innerHeight;
+
+      // Limita el desplazamiento
+      vpt[4] = Math.min(0, Math.max(vpt[4], -limitX));
+      vpt[5] = Math.min(0, Math.max(vpt[5], -limitY));
+    };
 
     useEffect(() => {
-      const canvas = localRef.current;
-      if (!canvas) return;
-      canvas.width = cols * pixelSize;
-      canvas.height = rows * pixelSize;
-      const ctx = canvas.getContext("2d");
-      if (!ctx) return;
-      ctx.imageSmoothingEnabled = false; // keep it pixelated
-    }, [pixelSize, rows, cols]);
+      if (!canvasEl.current) return;
+      const options = {};
+      const canvas = new fabric.Canvas(canvasEl.current, options);
+      canvas.selection = false;
+
+      canvasRef.current = canvas;
+
+      updateCanvasContext(canvas);
+
+      return () => {
+        canvas.dispose();
+      };
+    }, []);
 
     useImperativeHandle(ref, () => ({
-      getPixels: () => pixels,
-      setPixels: (newPixels: string[][]) => setPixels(newPixels),
+      getPixels: () => {
+        return [];
+      },
+
+      setPixels: (pixelsToDraw: string[][]) => {
+        if (!canvasEl.current) return;
+
+        const canvas = canvasRef.current;
+        if (!canvas) return;
+
+        canvas.clear();
+
+        for (let r = 0; r < BOARD_WIDTH; r++) {
+          for (let c = 0; c < BOARD_HEIGHT; c++) {
+            const color = pixelsToDraw[r][c];
+            if (color !== "#fff") {
+              const rect = new fabric.Rect({
+                left: c * PIXEL_SIZE,
+                top: r * PIXEL_SIZE,
+                width: PIXEL_SIZE,
+                height: PIXEL_SIZE,
+                fill: color,
+                selectable: false,
+                evented: false,
+              });
+              canvas.add(rect);
+            }
+          }
+        }
+        canvas.requestRenderAll();
+      },
+
       setPixelsFlat: (flatPixels: string[]) => {
-        if (flatPixels.length !== rows * cols) {
+        if (flatPixels.length !== BOARD_WIDTH * BOARD_HEIGHT) {
           throw new Error("Invalid pixel array length");
         }
         const newPixels2D: string[][] = [];
-        for (let r = 0; r < rows; r++) {
-          newPixels2D.push(flatPixels.slice(r * cols, (r + 1) * cols));
+        for (let r = 0; r < BOARD_WIDTH; r++) {
+          const row: string[] = flatPixels.slice(
+            r * BOARD_HEIGHT,
+            (r + 1) * BOARD_HEIGHT
+          );
+          newPixels2D.push(row);
         }
-        drawPixels(newPixels2D);
+
+        console.log(newPixels2D);
+        (ref as React.RefObject<DrawingPanelRef>).current?.setPixels?.(
+          newPixels2D
+        );
       },
     }));
 
-    const drawPixel = (e: React.MouseEvent<HTMLCanvasElement>) => {
-      if (!localRef.current) return;
-      const canvas = localRef.current;
-      const rect = canvas.getBoundingClientRect();
-      const ctx = canvas.getContext("2d");
-
-      const x = Math.floor((e.clientX - rect.left) / pixelSize);
-      const y = Math.floor((e.clientY - rect.top) / pixelSize);
-      if (!ctx) return;
-      ctx.fillStyle = color;
-      ctx.fillRect(x * pixelSize, y * pixelSize, pixelSize, pixelSize);
-
-      const copy = pixels.map((row) => [...row]);
-      copy[y][x] = color;
-      onChange?.({ x, y, color });
-      setPixels(copy);
-    };
-
-    const drawPixels = (pixelsToDraw: string[][]) => {
-      if (!localRef.current) return;
-      const canvas = localRef.current;
-      const ctx = canvas.getContext("2d");
-      if (!ctx) return;
-
-      ctx.clearRect(0, 0, canvas.width, canvas.height);
-
-      for (let r = 0; r < rows; r++) {
-        for (let c = 0; c < cols; c++) {
-          ctx.fillStyle = pixelsToDraw[r][c];
-          ctx.fillRect(c * pixelSize, r * pixelSize, pixelSize, pixelSize);
-        }
-      }
-    };
-
     return (
-      <div className="flex flex-col items-center">
-        {/* <input
-          type="color"
-          value={color}
-          onChange={(e) => setColor(e.target.value)}
-          className="mb-2"
-        /> */}
-        <canvas
-          ref={localRef}
-          onMouseDown={(e) => {
-            setIsDrawing(true);
-            drawPixel(e);
-          }}
-          onMouseMove={(e) => isDrawing && drawPixel(e)}
-          onMouseUp={() => setIsDrawing(false)}
-          onMouseLeave={() => setIsDrawing(false)}
-          className="border border-gray-500"
-        />
-      </div>
+      <canvas
+        width={window.innerWidth}
+        height={window.innerHeight}
+        ref={canvasEl}
+      />
     );
   }
 );
+
+DrawingPanel.displayName = "DrawingPanel";
 
 export default DrawingPanel;

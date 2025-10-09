@@ -4,7 +4,7 @@ import IndexPage from "./Pages/Index";
 // interface AppProps {}
 const App: React.FC = () => {
   return (
-    <div>
+    <div className="flex flex-1 flex-col">
       <Routes>
         <Route path="/" element={<IndexPage />} />
         <Route path="*" element={<div>404 Not Found</div>} />

@@ -1,16 +1,20 @@
-import { useEffect, useRef } from "react";
-import DrawingPanel, { type DrawingPanelRef } from "../Components/DrawingPanel";
+import { useEffect, useRef, useState } from "react";
 import { MessageEventAdapter } from "../Adapters/MessageEventAdapter";
 import { EventWebSocket } from "../Util/EvenWebSocket";
 import { EventTypes } from "../Models/Events";
 import { JoinEventAdapter } from "../Adapters/JoinEventAdapter";
 import { DrawingEventAdapter } from "../Adapters/DrawingEventAdapter";
 import type { changeEvent } from "../Models/DrawEvent";
+import type { DrawingPanelRef } from "../Components/DrawingPanel";
+import DrawingPanel from "../Components/DrawingPanel";
+import ColorPicker from "../Components/ColorPicker";
 
 const ws = new WebSocket("ws://localhost:8081");
 
 // interface IndexPageProps {}
 const IndexPage: React.FC = () => {
+  const [color, setColor] = useState<string>("#000000");
+
   const drawingPanelRef = useRef<DrawingPanelRef>(null);
   const handlePixelsChange = (data: changeEvent) => {
     if (!ws.readyState) return;
@@ -56,21 +60,18 @@ const IndexPage: React.FC = () => {
     };
   }, []);
 
+  useEffect(() => {
+    console.log("Selected color:", color);
+  }, [color]);
+
   return (
-    <div className="flex justify-center items-center h-screen">
-      {/* <button
-        type="button"
-        className="btn btn-primary mb-4"
-        onClick={() => {
-          console.log("Sending message to server...");
-          const message = "Hello, Server!";
-          const data = MessageEventAdapter.ToArrayBuffer(message);
-          ws.send(data);
-        }}
-      >
-        Send Message
-      </button> */}
-      <DrawingPanel ref={drawingPanelRef} onChange={handlePixelsChange} />
+    <div className="relative min-h-screen flex items-center justify-center">
+      <DrawingPanel
+        ref={drawingPanelRef}
+        onChange={handlePixelsChange}
+        color={color}
+      />
+      <ColorPicker onChange={(color) => setColor(color)} />
     </div>
   );
 };
