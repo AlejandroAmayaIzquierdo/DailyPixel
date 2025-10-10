@@ -28,3 +28,9 @@ public class DrawPacket : BaseEvent
     [BinaryData(4, -1)]
     public string? Color { get; set; }
 }
+
+public class UserCountPacket : BaseEvent
+{
+    [BinaryData(2, 32)]
+    public int Count { get; set; }
+}

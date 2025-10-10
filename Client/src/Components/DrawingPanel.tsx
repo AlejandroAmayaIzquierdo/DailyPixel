@@ -3,8 +3,8 @@ import * as fabric from "fabric";
 import type { changeEvent } from "../Models/DrawEvent";
 
 const PIXEL_SIZE = 20;
-const BOARD_WIDTH = 1000;
-const BOARD_HEIGHT = 1000;
+const BOARD_WIDTH = 500;
+const BOARD_HEIGHT = 500;
 
 interface DrawingPanelProps {
   color?: string;
@@ -25,6 +25,8 @@ const DrawingPanel = forwardRef<DrawingPanelRef, DrawingPanelProps>(
     const isDragging = useRef(false);
     const lastPosition = useRef({ x: 0, y: 0 });
 
+    const isPanning = useRef(false);
+
     const canvasRef = useRef<fabric.Canvas>(new fabric.Canvas());
 
     const colorRef = useRef<string>(color || "#000000");
@@ -38,15 +40,19 @@ const DrawingPanel = forwardRef<DrawingPanelRef, DrawingPanelProps>(
 
     const updateCanvasContext = (canvas: fabric.Canvas) => {
       canvas.on("mouse:down", (event) => {
+        // console.log("Mouse down event:", event);
         const e = event.e;
-
-        if (e.altKey && isMouseEvent(e)) {
+        if (!isMouseEvent(e)) return;
+        if (e.altKey || e.button === 1) {
           isDragging.current = true;
           lastPosition.current = { x: e.clientX, y: e.clientY };
           return;
         }
-        isDrawing.current = true;
-        drawPixel(canvas, event.e as fabric.TPointerEvent);
+
+        if (e.button === 0) {
+          isDrawing.current = true;
+          drawPixel(canvas, event.e as fabric.TPointerEvent);
+        }
       });
 
       canvas.on("mouse:move", (event) => {
@@ -57,7 +63,7 @@ const DrawingPanel = forwardRef<DrawingPanelRef, DrawingPanelProps>(
           vpt[4] += e.clientX - lastPosition.current.x;
           vpt[5] += e.clientY - lastPosition.current.y;
 
-          clampPan(canvas);
+          //clampPan(canvas);
 
           canvas.requestRenderAll();
           lastPosition.current = { x: e.clientX, y: e.clientY };
@@ -72,15 +78,16 @@ const DrawingPanel = forwardRef<DrawingPanelRef, DrawingPanelProps>(
       });
 
       canvas.on("mouse:wheel", (event) => {
+        if (isPanning.current) return;
         const delta = event.e.deltaY;
         let zoom = canvas.getZoom();
         zoom *= 0.999 ** delta;
-        zoom = Math.min(Math.max(zoom, 0.2), 20);
+        zoom = Math.min(Math.max(zoom, 0.03), 20);
         const point = new fabric.Point(event.e.offsetX, event.e.offsetY);
 
         canvas.zoomToPoint(point, zoom);
 
-        clampPan(canvas);
+        //clampPan(canvas);
 
         event.e.preventDefault();
         event.e.stopPropagation();
@@ -92,8 +99,8 @@ const DrawingPanel = forwardRef<DrawingPanelRef, DrawingPanelProps>(
       const x = Math.floor(pointer.x / PIXEL_SIZE) * PIXEL_SIZE;
       const y = Math.floor(pointer.y / PIXEL_SIZE) * PIXEL_SIZE;
 
-      if (x < 0 || x > BOARD_WIDTH * PIXEL_SIZE) return;
-      if (y < 0 || y > BOARD_HEIGHT * PIXEL_SIZE) return;
+      if (x < 0 || x > BOARD_WIDTH * PIXEL_SIZE || isNaN(x)) return;
+      if (y < 0 || y > BOARD_HEIGHT * PIXEL_SIZE || isNaN(y)) return;
       const rect = new fabric.Rect({
         left: x,
         top: y,
@@ -106,28 +113,96 @@ const DrawingPanel = forwardRef<DrawingPanelRef, DrawingPanelProps>(
       canvas.add(rect);
       const row = Math.floor(x / PIXEL_SIZE);
       const col = Math.floor(y / PIXEL_SIZE);
+
+      smoothCenterTo(canvas, x, y);
+
       // pixels.current[xPixel][yPixel] = "#000";
       onChange?.({ x: row, y: col, color: colorRef.current || "#000" });
     };
 
-    const clampPan = (canvas: fabric.Canvas) => {
+    const smoothCenterTo = (
+      canvas: fabric.Canvas,
+      targetX: number,
+      targetY: number,
+      duration = 400 // ms
+    ) => {
+      isPanning.current = true;
+      const start = performance.now();
       const vpt = canvas.viewportTransform!;
-      const zoom = canvas.getZoom();
+      const startPan = { x: vpt[4], y: vpt[5] };
 
-      // Definir límites (en coordenadas del lienzo)
-      const limitX = BOARD_WIDTH * PIXEL_SIZE * zoom - window.innerWidth;
-      const limitY = BOARD_HEIGHT * PIXEL_SIZE * zoom - window.innerHeight;
+      const canvasWidth = canvas.getWidth();
+      const canvasHeight = canvas.getHeight();
 
-      // Limita el desplazamiento
-      vpt[4] = Math.min(0, Math.max(vpt[4], -limitX));
-      vpt[5] = Math.min(0, Math.max(vpt[5], -limitY));
+      // Calcula el pan objetivo para centrar el punto
+      const targetPan = {
+        x: -targetX * canvas.getZoom() + canvasWidth / 2,
+        y: -targetY * canvas.getZoom() + canvasHeight / 2,
+      };
+
+      const animate = (time: number) => {
+        const t = Math.min((time - start) / duration, 1);
+        const ease = t * (2 - t); // easing suave
+        const x = startPan.x + (targetPan.x - startPan.x) * ease;
+        const y = startPan.y + (targetPan.y - startPan.y) * ease;
+
+        canvas.viewportTransform![4] = x;
+        canvas.viewportTransform![5] = y;
+        canvas.requestRenderAll();
+
+        if (t < 1) requestAnimationFrame(animate);
+
+        setTimeout(() => {
+          isPanning.current = false;
+        }, duration + 100);
+      };
+
+      requestAnimationFrame(animate);
+    };
+
+    // const clampPan = (canvas: fabric.Canvas) => {
+    //   const vpt = canvas.viewportTransform!;
+    //   const zoom = canvas.getZoom();
+
+    //   // Definir límites (en coordenadas del lienzo)
+    //   const limitX = window.innerWidth + 100;
+    //   //const limitY = BOARD_HEIGHT * PIXEL_SIZE * zoom - window.innerHeight;
+
+    //   // Limita el desplazamiento
+    //   vpt[4] = Math.min(-100, Math.max(vpt[4], -limitX));
+    //   //vpt[5] = Math.min(0, Math.max(vpt[5], -limitY));
+    // };
+
+    const setUpCanvasBackground = (canvas: fabric.Canvas) => {
+      canvas.selection = false;
+      canvas.backgroundColor = "#333333";
+
+      // Medidas totales del tablero (en píxeles reales)
+      const boardPixelWidth = BOARD_WIDTH * PIXEL_SIZE;
+      const boardPixelHeight = BOARD_HEIGHT * PIXEL_SIZE;
+
+      // Rect blanco (el "board" donde se dibuja)
+      const board = new fabric.Rect({
+        left: 0, // Centrado horizontal
+        top: 0, // Centrado vertical
+        width: boardPixelWidth,
+        height: boardPixelHeight,
+        fill: "#ffffff", // Fondo blanco del tablero
+        strokeWidth: 0,
+        selectable: false,
+        evented: false,
+      });
+      canvas.add(board);
+
+      // canvas.sendObjectBackwards(board);
     };
 
     useEffect(() => {
       if (!canvasEl.current) return;
-      const options = {};
-      const canvas = new fabric.Canvas(canvasEl.current, options);
-      canvas.selection = false;
+      const canvas = new fabric.Canvas(canvasEl.current, {
+        selection: false,
+        backgroundColor: "#333333",
+      });
 
       canvasRef.current = canvas;
 
@@ -150,6 +225,10 @@ const DrawingPanel = forwardRef<DrawingPanelRef, DrawingPanelProps>(
         if (!canvas) return;
 
         canvas.clear();
+
+        setUpCanvasBackground(canvas);
+
+        canvas.requestRenderAll();
 
         for (let r = 0; r < BOARD_WIDTH; r++) {
           for (let c = 0; c < BOARD_HEIGHT; c++) {

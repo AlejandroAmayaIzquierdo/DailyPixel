@@ -10,6 +10,9 @@ export class JoinEventAdapter {
 
     const header = view.getUint8(offset++);
     const success = view.getUint8(offset++) === 1;
+    const playerCount = view.getUint32(offset, true);
+    offset += 4;
+
     const playerId = view.getUint32(offset, true);
     offset += 4;
 
@@ -21,6 +24,7 @@ export class JoinEventAdapter {
       header,
       success,
       playerId,
+      playerCount,
       board: decode(boardMessage.split(",")),
     };
   };

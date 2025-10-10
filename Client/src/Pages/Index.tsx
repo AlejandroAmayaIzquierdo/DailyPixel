@@ -8,6 +8,7 @@ import type { changeEvent } from "../Models/DrawEvent";
 import type { DrawingPanelRef } from "../Components/DrawingPanel";
 import DrawingPanel from "../Components/DrawingPanel";
 import ColorPicker from "../Components/ColorPicker";
+import UserCounter from "../Components/UserCounter";
 
 const ws = new WebSocket("ws://localhost:8081");
 
@@ -15,10 +16,15 @@ const ws = new WebSocket("ws://localhost:8081");
 const IndexPage: React.FC = () => {
   const [color, setColor] = useState<string>("#000000");
 
+  const playerId = useRef<number | null>(null);
+  const [usersConnected, setUsersConnected] = useState(1);
+
   const drawingPanelRef = useRef<DrawingPanelRef>(null);
   const handlePixelsChange = (data: changeEvent) => {
     if (!ws.readyState) return;
-    ws.send(DrawingEventAdapter.ToArrayBuffer(data));
+
+    if (playerId.current === null) return;
+    ws.send(DrawingEventAdapter.ToArrayBuffer(playerId.current, data));
   };
 
   useEffect(() => {
@@ -35,8 +41,12 @@ const IndexPage: React.FC = () => {
           case EventTypes.CONNECTION: {
             const joinEvent = JoinEventAdapter.FromArrayBuffer(event.data);
             console.log(
-              `Connection event - Success: ${joinEvent.success}, Player ID: ${joinEvent.playerId}`
+              `Connection event - Success: ${joinEvent.success}, Player ID: ${joinEvent.playerId}, Player Count: ${joinEvent.playerCount}`
             );
+            playerId.current = joinEvent.playerId;
+
+            setUsersConnected(joinEvent.playerCount ?? 1);
+
             // console.log(joinEvent.board);
             drawingPanelRef.current?.setPixelsFlat?.(joinEvent.board);
 
@@ -51,6 +61,12 @@ const IndexPage: React.FC = () => {
             const drawingData = DrawingEventAdapter.FromArrayBuffer(event.data);
             // console.log(drawingData);
             drawingPanelRef.current?.setPixelsFlat?.(drawingData);
+            break;
+          }
+          case EventTypes.USER_COUNT: {
+            const view = new DataView(event.data);
+            const count = view.getUint8(1 + 4); // after header and player id
+            setUsersConnected(count);
             break;
           }
         }
@@ -68,6 +84,7 @@ const IndexPage: React.FC = () => {
         color={color}
       />
       <ColorPicker onChange={(color) => setColor(color)} />
+      <UserCounter count={usersConnected ?? 1} />
     </div>
   );
 };

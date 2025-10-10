@@ -11,8 +11,9 @@ public class JoinEventAdapter
 
         byte header = 0x00; // join Event
         writer.Write(header);
-        writer.Write(playerID);
         writer.Write(success ? (byte)1 : (byte)0); // success
+        writer.Write(playerID);
+        writer.Write(StateService.Game.players.Count);
         byte[] gameBytes = System.Text.Encoding.UTF8.GetBytes(StateService.Game.ToString().Trim());
         writer.Write(gameBytes);
 

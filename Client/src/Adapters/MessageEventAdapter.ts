@@ -1,5 +1,5 @@
 export class MessageEventAdapter {
-  public static ToArrayBuffer(msg: string): ArrayBuffer {
+  public static ToArrayBuffer(playerId: number, msg: string): ArrayBuffer {
     const encoder = new TextEncoder();
     const messageBytes = encoder.encode(msg);
     const messageLength = messageBytes.length;
@@ -13,7 +13,7 @@ export class MessageEventAdapter {
     offset++;
 
     //player id
-    view.setUint32(offset, 12345, true);
+    view.setUint32(offset, playerId, true);
     offset += 4;
 
     // string message

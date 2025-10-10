@@ -33,9 +33,9 @@ const colors: string[] = [
 const ColorPicker: React.FC<ColorPickerProps> = ({ onChange }) => {
   const [selectedColor, setSelectedColor] = useState<string>("#000000");
   return (
-    <div className="absolute bottom-0 w-[90%]">
-      <div className="bg-gray-800 w-full h-15 mb-5 rounded-2xl">
-        <div className="flex justify-center items-center h-full gap-4">
+    <div className="absolute bottom-5 w-[95%]">
+      <div className="w-full h-fit rounded-md bg-gray-400/20 backdrop-blur-sm border-2 border-gray-200">
+        <div className="flex flex-wrap gap-2 p-3 justify-center items-center">
           {colors.map((color) => (
             <div
               key={color}

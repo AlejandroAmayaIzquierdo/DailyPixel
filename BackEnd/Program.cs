@@ -46,15 +46,21 @@ public class Program
                 if (socket.ConnectionInfo.Headers.TryGetValue("Origin", out string? value))
                 {
                     var (playerId, outMsg) = StateService.Game.TryJoin(socket);
-
-                    byte[] package = JoinEventAdapter.CreatePacket(
-                        playerId ?? -1,
-                        playerId.HasValue
-                    );
-
                     if (playerId != null)
                     {
-                        socket.Send(package);
+                        Console.WriteLine($"New connection: {socket.ConnectionInfo.Id}");
+                        byte[] package = JoinEventAdapter.CreatePacket(
+                            playerId.Value,
+                            playerId.HasValue
+                        );
+                        socket.Send(package); // send the join packet
+                        StateService.BroadCastClients(
+                            UserCountEventAdapter.CreatePacket(
+                                playerId.Value,
+                                StateService.Game.players.Count
+                            ),
+                            socket
+                        );
                         return;
                     }
                     Console.WriteLine($"Connection refused: {outMsg}");
@@ -78,9 +84,19 @@ public class Program
                     await socket.Send("Error");
                 }
             };
+            socket.OnError = (error) =>
+            {
+                Console.WriteLine("Error: " + error.Message);
+            };
             socket.OnClose = () =>
             {
+                Console.WriteLine("Connection closed");
                 StateService.Game.Leave(socket.ConnectionInfo.Id);
+
+                StateService.BroadCastClients(
+                    UserCountEventAdapter.CreatePacket(-1, StateService.Game.players.Count),
+                    socket
+                );
             };
         });
 

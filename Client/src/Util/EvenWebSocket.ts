@@ -35,6 +35,8 @@ export class EventWebSocket {
         return EventTypes.MESSAGE;
       case 0x02:
         return EventTypes.DRAW;
+      case 0x03:
+        return EventTypes.USER_COUNT;
       default:
         return EventTypes.UNKNOWN;
     }

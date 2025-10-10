@@ -5,7 +5,10 @@ export class DrawingEventAdapter {
   // public static FromArrayBuffer(buffer: ArrayBuffer): string {
   //     const view = new DataView(buffer);
   // }
-  public static ToArrayBuffer(data: changeEvent): ArrayBuffer {
+  public static ToArrayBuffer(
+    playerId: number,
+    data: changeEvent
+  ): ArrayBuffer {
     const encoder = new TextEncoder();
 
     const header = 0x02;
@@ -22,7 +25,7 @@ export class DrawingEventAdapter {
     offset++;
 
     //player id
-    view.setUint32(offset, 12345, true);
+    view.setUint32(offset, playerId, true);
     offset += 4;
 
     //x coordinates
@@ -46,8 +49,7 @@ export class DrawingEventAdapter {
     const header = view.getUint8(0);
     if (header !== 0x02) throw new Error("Invalid header for DrawingEvent");
 
-    const playerId = view.getUint32(1, true);
-    console.log("Player ID:", playerId);
+    view.getUint32(1, true); // player id, not used here
 
     const messageBytes = new Uint8Array(buffer, 5);
     const message = decoder.decode(messageBytes);
