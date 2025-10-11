@@ -1,0 +1,38 @@
+services:
+  backend:
+    build: ./BackEnd
+    container_name: backend
+    ports:
+      - "8081:8081"
+    networks:
+      - app-network
+
+  client:
+    build:
+      args:
+        - VITE_WEBSOCKET_URL=ws://localhost/ws
+      context: ./Client
+    container_name: client
+    ports:
+      - "3000:3000"
+    networks:
+      - app-network
+    environment:
+      - VITE_WEBSOCKET_URL=ws://localhost/ws
+
+  nginx:
+    image: nginx:latest
+    container_name: nginx
+    ports:
+      - "80:80"
+    depends_on:
+      - backend
+      - client
+    networks:
+      - app-network
+    volumes:
+      - ./nginx.conf:/etc/nginx/nginx.conf:ro # Mount the NGINX config file
+
+networks:
+  app-network:
+    driver: bridge

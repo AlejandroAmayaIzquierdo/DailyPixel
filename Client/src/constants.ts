@@ -1,0 +1,1 @@
+export const { VITE_WEBSOCKET_URL } = import.meta.env;

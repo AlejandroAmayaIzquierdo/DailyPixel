@@ -102,7 +102,7 @@ public class Program
                 );
             };
         });
-
-        Console.ReadLine();
+        app.UseCors();
+        app.Run();
     }
 }

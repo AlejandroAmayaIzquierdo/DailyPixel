@@ -9,8 +9,9 @@ import type { DrawingPanelRef } from "../Components/DrawingPanel";
 import DrawingPanel from "../Components/DrawingPanel";
 import ColorPicker from "../Components/ColorPicker";
 import UserCounter from "../Components/UserCounter";
+import { VITE_WEBSOCKET_URL } from "../constants";
 
-const ws = new WebSocket("ws://localhost:8081");
+const ws = new WebSocket(VITE_WEBSOCKET_URL ?? "ws://localhost:8080");
 
 // interface IndexPageProps {}
 const IndexPage: React.FC = () => {
