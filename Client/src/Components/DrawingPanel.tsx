@@ -82,7 +82,7 @@ const DrawingPanel = forwardRef<DrawingPanelRef, DrawingPanelProps>(
         const delta = event.e.deltaY;
         let zoom = canvas.getZoom();
         zoom *= 0.999 ** delta;
-        zoom = Math.min(Math.max(zoom, 0.03), 20);
+        zoom = Math.min(Math.max(zoom, 0.06), 20);
         const point = new fabric.Point(event.e.offsetX, event.e.offsetY);
 
         canvas.zoomToPoint(point, zoom);
@@ -164,13 +164,29 @@ const DrawingPanel = forwardRef<DrawingPanelRef, DrawingPanelProps>(
     //   const vpt = canvas.viewportTransform!;
     //   const zoom = canvas.getZoom();
 
-    //   // Definir límites (en coordenadas del lienzo)
-    //   const limitX = window.innerWidth + 100;
-    //   //const limitY = BOARD_HEIGHT * PIXEL_SIZE * zoom - window.innerHeight;
+    //   // Canvas logical size in screen pixels
+    //   const boardWidth = BOARD_WIDTH * PIXEL_SIZE * zoom;
+    //   const boardHeight = BOARD_HEIGHT * PIXEL_SIZE * zoom;
 
-    //   // Limita el desplazamiento
-    //   vpt[4] = Math.min(-100, Math.max(vpt[4], -limitX));
-    //   //vpt[5] = Math.min(0, Math.max(vpt[5], -limitY));
+    //   const canvasWidth = window.innerWidth;
+    //   const canvasHeight = window.innerHeight;
+
+    //   // Define how far outside the board the user can pan (2x board size)
+    //   const maxOutsideX = boardWidth * 2;
+    //   const maxOutsideY = boardHeight * 2;
+
+    //   // Compute clamping limits
+    //   const minX = -maxOutsideX;
+    //   const maxX = boardWidth - canvasWidth + maxOutsideX;
+
+    //   const minY = -maxOutsideY;
+    //   const maxY = boardHeight - canvasHeight + maxOutsideY;
+
+    //   // Clamp viewport translation
+    //   vpt[4] = Math.max(minX, Math.min(vpt[4], maxX));
+    //   vpt[5] = Math.max(minY, Math.min(vpt[5], maxY));
+
+    //   canvas.setViewportTransform(vpt);
     // };
 
     const setUpCanvasBackground = (canvas: fabric.Canvas) => {
