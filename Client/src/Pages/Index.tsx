@@ -45,6 +45,9 @@ const IndexPage: React.FC = () => {
             );
             playerId.current = joinEvent.playerId;
 
+            console.log("User connected:", joinEvent.playerId);
+            console.log("Total users connected:", joinEvent.playerCount);
+
             setUsersConnected(joinEvent.playerCount ?? 1);
 
             // console.log(joinEvent.board);
@@ -72,6 +75,22 @@ const IndexPage: React.FC = () => {
         }
       } else {
         console.log("Received non-binary message:", event.data);
+      }
+    };
+
+    const handleBeforeUnload = () => {
+      console.log("Closing WebSocket connection");
+      console.log(ws.readyState);
+      if (ws.readyState === WebSocket.OPEN) {
+        ws.close();
+      }
+    };
+    window.addEventListener("beforeunload", handleBeforeUnload);
+
+    return () => {
+      window.removeEventListener("beforeunload", handleBeforeUnload);
+      if (ws.readyState === WebSocket.OPEN) {
+        ws.close();
       }
     };
   }, []);

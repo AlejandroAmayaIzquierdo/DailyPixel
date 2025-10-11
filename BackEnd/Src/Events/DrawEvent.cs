@@ -14,7 +14,13 @@ public class DrawEvent : BaseEventHandler<DrawPacket>
         if (dto.Color == null)
             return Task.CompletedTask;
 
+        StateService.Game.players.TryGetValue(socket.ConnectionInfo.Id, out Player? player);
+        if (player == null)
+            return Task.CompletedTask;
+
         StateService.Game.DrawOnBoard(dto.X, dto.Y, dto.Color ?? "");
+
+        player.lastActive = DateTime.Now;
 
         string board = StateService.Game.ToString();
 

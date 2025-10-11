@@ -62,6 +62,9 @@ public class GameState
 
     public bool Leave(Guid guid)
     {
-        return players.Remove(guid);
+        var isRemoved = players.Remove(guid, out Player? player);
+        Console.WriteLine($"Player {player?.PlayerID} left the game");
+        Console.WriteLine($"Players count: {players.Count}");
+        return isRemoved;
     }
 }

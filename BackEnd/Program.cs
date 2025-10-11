@@ -53,6 +53,9 @@ public class Program
                             playerId.Value,
                             playerId.HasValue
                         );
+                        Console.WriteLine(
+                            $"Player {playerId.Value} joined the game. Total players: {StateService.Game.players.Count}"
+                        );
                         socket.Send(package); // send the join packet
                         StateService.BroadCastClients(
                             UserCountEventAdapter.CreatePacket(
