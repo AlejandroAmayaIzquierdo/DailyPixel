@@ -31,5 +31,5 @@ RUN npm install -g serve
 # Copy the build output from stage1
 COPY --from=stage1 /app/dist .
 
-# Use serve to host the app on port 3000
-ENTRYPOINT ["serve", "-s", "-n", "-d", ".", "-p", "3000"]
+# Use serve to host the app on port 80
+ENTRYPOINT ["serve", "-s", "-n", "-d", ".", "-p", "80"]

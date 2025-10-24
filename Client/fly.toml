@@ -1,0 +1,23 @@
+# fly.toml app configuration file generated for my-rplace on 2025-10-24T21:14:21+01:00
+#
+# See https://fly.io/docs/reference/configuration/ for information about how to use this file.
+#
+
+app = 'my-rplace'
+primary_region = 'cdg'
+
+[build]
+
+[env]
+  VITE_WEBSOCKET_URL = 'wss://backend-polished-leaf-8908.fly.dev'
+
+[http_service]
+  internal_port = 80
+  force_https = true
+  auto_stop_machines = 'stop'
+  auto_start_machines = true
+  min_machines_running = 0
+  processes = ['app']
+
+[[vm]]
+  size = 'shared-cpu-1x'

@@ -43,9 +43,11 @@ const DrawingPanel = forwardRef<DrawingPanelRef, DrawingPanelProps>(
         // console.log("Mouse down event:", event);
         const e = event.e;
         if (!isMouseEvent(e)) return;
-        if (e.altKey || e.button === 1) {
+        // e.button: 0 = left, 1 = middle (wheel), 2 = right
+        if (e.altKey || e.button === 1 || e.button === 2) {
           isDragging.current = true;
           lastPosition.current = { x: e.clientX, y: e.clientY };
+          event.e.preventDefault();
           return;
         }
 
@@ -67,6 +69,8 @@ const DrawingPanel = forwardRef<DrawingPanelRef, DrawingPanelProps>(
 
           canvas.requestRenderAll();
           lastPosition.current = { x: e.clientX, y: e.clientY };
+          event.e.preventDefault();
+          event.e.stopPropagation();
           return;
         }
         if (isDrawing.current)
@@ -92,6 +96,42 @@ const DrawingPanel = forwardRef<DrawingPanelRef, DrawingPanelProps>(
         event.e.preventDefault();
         event.e.stopPropagation();
       });
+
+      canvas.on("after:render", () => {
+        updateVisiblePixels(canvas);
+      });
+    };
+
+    const updateVisiblePixels = (canvas: fabric.Canvas) => {
+      const vpt = canvas.viewportTransform!;
+      const zoom = canvas.getZoom();
+
+      const viewportLeft = -vpt[4] / zoom;
+      const viewportTop = -vpt[5] / zoom;
+      const viewportRight = viewportLeft + canvas.width! / zoom;
+      const viewportBottom = viewportTop + canvas.height! / zoom;
+
+      canvas.getObjects().forEach((obj) => {
+        if (obj === undefined) return;
+
+        const objLeft = obj.left || 0;
+        const objTop = obj.top || 0;
+        const objRight = objLeft + PIXEL_SIZE;
+        const objBottom = objTop + PIXEL_SIZE;
+
+        if (objLeft === 0 && objTop === 0) {
+          obj.visible = true;
+          return;
+        }
+
+        // Ocultar objetos fuera del viewport
+        obj.visible = !(
+          objRight < viewportLeft ||
+          objLeft > viewportRight ||
+          objBottom < viewportTop ||
+          objTop > viewportBottom
+        );
+      });
     };
 
     const drawPixel = (canvas: fabric.Canvas, event: fabric.TPointerEvent) => {
@@ -101,16 +141,26 @@ const DrawingPanel = forwardRef<DrawingPanelRef, DrawingPanelProps>(
 
       if (x < 0 || x > BOARD_WIDTH * PIXEL_SIZE || isNaN(x)) return;
       if (y < 0 || y > BOARD_HEIGHT * PIXEL_SIZE || isNaN(y)) return;
-      const rect = new fabric.Rect({
-        left: x,
-        top: y,
-        width: PIXEL_SIZE,
-        height: PIXEL_SIZE,
-        fill: colorRef.current || "#000",
-        selectable: false,
-        evented: false,
-      });
-      canvas.add(rect);
+
+      const existingRect = canvas
+        .getObjects()
+        .find((obj) => obj.left === x && obj.top === y);
+      if (existingRect) {
+        if (existingRect.fill === colorRef.current) return;
+        existingRect.set("fill", colorRef.current || "#000");
+      } else {
+        const rect = new fabric.Rect({
+          left: x,
+          top: y,
+          width: PIXEL_SIZE,
+          height: PIXEL_SIZE,
+          fill: colorRef.current || "#000",
+          selectable: false,
+          evented: false,
+        });
+        canvas.add(rect);
+      }
+
       const row = Math.floor(x / PIXEL_SIZE);
       const col = Math.floor(y / PIXEL_SIZE);
 
@@ -207,6 +257,8 @@ const DrawingPanel = forwardRef<DrawingPanelRef, DrawingPanelProps>(
         strokeWidth: 0,
         selectable: false,
         evented: false,
+        hasBorders: false,
+        hasControls: false,
       });
       canvas.add(board);
 
@@ -218,9 +270,21 @@ const DrawingPanel = forwardRef<DrawingPanelRef, DrawingPanelProps>(
       const canvas = new fabric.Canvas(canvasEl.current, {
         selection: false,
         backgroundColor: "#333333",
+        enablePointerEvents: true,
       });
 
       canvasRef.current = canvas;
+
+      // Prevenir el comportamiento por defecto del botón central
+      canvasEl.current.addEventListener("mousedown", (e) => {
+        if (e.button === 1 || e.button === 2) {
+          e.preventDefault();
+        }
+      });
+
+      canvasEl.current.addEventListener("contextmenu", (e) => {
+        e.preventDefault();
+      });
 
       updateCanvasContext(canvas);
 
@@ -258,6 +322,8 @@ const DrawingPanel = forwardRef<DrawingPanelRef, DrawingPanelProps>(
                 fill: colorData,
                 selectable: false,
                 evented: false,
+                hasControls: false,
+                hasBorders: false,
               });
               canvas.add(rect);
             }

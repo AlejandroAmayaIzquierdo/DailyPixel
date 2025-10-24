@@ -10,12 +10,18 @@ import DrawingPanel from "../Components/DrawingPanel";
 import ColorPicker from "../Components/ColorPicker";
 import UserCounter from "../Components/UserCounter";
 import { VITE_WEBSOCKET_URL } from "../constants";
+import { Loader2 } from "lucide-react";
+import CheatSheet from "../Components/CheatSheet";
+import GithubLink from "../Components/GithubLink";
 
 const ws = new WebSocket(VITE_WEBSOCKET_URL ?? "ws://localhost:8080");
 
 // interface IndexPageProps {}
 const IndexPage: React.FC = () => {
   const [color, setColor] = useState<string>("#000000");
+
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
 
   const playerId = useRef<number | null>(null);
   const [usersConnected, setUsersConnected] = useState(1);
@@ -31,8 +37,19 @@ const IndexPage: React.FC = () => {
   useEffect(() => {
     ws.binaryType = "arraybuffer";
 
+    ws.onerror = (event) => {
+      console.error("WebSocket error observed:", event);
+      setError("WebSocket connection error");
+    };
+
     ws.onopen = (event) => {
+      setLoading(false);
       console.log("WebSocket connection opened:", event);
+    };
+
+    ws.onclose = (event) => {
+      console.log("WebSocket connection closed:", event);
+      setError("WebSocket connection closed");
     };
 
     ws.onmessage = (event) => {
@@ -98,13 +115,27 @@ const IndexPage: React.FC = () => {
 
   return (
     <div className="relative min-h-screen flex items-center justify-center">
+      {error !== null && (
+        <div className="absolute bottom-20 left-1/2 -translate-x-1/2 -translate-y-1/2 text-red-500 text-2xl font-bold bg-gray-500/20 p-4 rounded-md shadow-md min-w-30 text-center flex justify-center items-center">
+          {error}
+        </div>
+      )}
+
+      {loading && (
+        <Loader2 className="animate-spin absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-30 h-30" />
+      )}
+
       <DrawingPanel
         ref={drawingPanelRef}
         onChange={handlePixelsChange}
         color={color}
       />
+
+      <GithubLink />
+      <CheatSheet />
       <ColorPicker onChange={(color) => setColor(color)} />
       <UserCounter count={usersConnected ?? 1} />
+      {/* {!loading && <></>} */}
     </div>
   );
 };

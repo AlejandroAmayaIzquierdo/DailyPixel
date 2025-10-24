@@ -18,6 +18,7 @@ public class GameState
     public GameState()
     {
         ClearBoard();
+        FillWithTestData();
     }
 
     public (int?, string) TryJoin(IWebSocketConnection socket)
@@ -49,6 +50,67 @@ public class GameState
             for (int x = 0; x < BOARD_SIZE; x++)
             {
                 board[y, x] = "#fff";
+            }
+        }
+    }
+
+    public void FillWithTestData()
+    {
+        // Dibujar algunos rectángulos de colores
+        // for (int y = 50; y < 100; y++)
+        // {
+        //     for (int x = 50; x < 150; x++)
+        //     {
+        //         board[y, x] = "#ff0000"; // Rectángulo rojo
+        //     }
+        // }
+
+        // for (int y = 120; y < 180; y++)
+        // {
+        //     for (int x = 80; x < 200; x++)
+        //     {
+        //         board[y, x] = "#00ff00"; // Rectángulo verde
+        //     }
+        // }
+
+        // for (int y = 200; y < 250; y++)
+        // {
+        //     for (int x = 100; x < 250; x++)
+        //     {
+        //         board[y, x] = "#0000ff"; // Rectángulo azul
+        //     }
+        // }
+
+        // Dibujar una línea diagonal
+        for (int i = 0; i < 100; i++)
+        {
+            board[300 + i, 50 + i] = "#ffff00"; // Línea amarilla
+        }
+
+        // Dibujar algunos puntos dispersos
+        Random rand = new();
+        for (int i = 0; i < 300; i++)
+        {
+            int x = rand.Next(0, BOARD_SIZE);
+            int y = rand.Next(0, BOARD_SIZE);
+            string[] colors = ["#ff00ff", "#00ffff", "#ff8800", "#8800ff", "#00ff88"];
+            board[y, x] = colors[rand.Next(colors.Length)];
+        }
+
+        // Dibujar un patrón de cuadrícula
+        for (int y = 350; y < 400; y += 10)
+        {
+            for (int x = 300; x < 350; x++)
+            {
+                board[y, x] = "#000000"; // Líneas negras horizontales
+            }
+        }
+
+        for (int x = 300; x < 350; x += 10)
+        {
+            for (int y = 350; y < 400; y++)
+            {
+                board[y, x] = "#000000"; // Líneas negras verticales
             }
         }
     }
